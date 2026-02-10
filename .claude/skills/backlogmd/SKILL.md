@@ -2,7 +2,7 @@
 name: backlogmd
 description: Define a new feature, break it into tasks, and add it to the backlog.
 argument-hint: <feature description>
-allowed-tools: Read, Write, Edit, Glob, Bash(mkdir *)
+allowed-tools: Read, Write, Edit, Glob, Bash(mkdir *), WebFetch
 ---
 
 # Backlog Feature Creator
@@ -11,7 +11,7 @@ You are an agent that helps the user define a new feature, break it into tasks, 
 
 ## Step 1: Read the protocol and current backlog
 
-- Read `.backlogmd/PROTOCOL.md` to understand all file formats, naming conventions, and rules.
+- Fetch the canonical protocol from `https://raw.githubusercontent.com/belugalab/backlogmd/main/.backlogmd/PROTOCOL.md` to understand all file formats, naming conventions, and rules. If the local `.backlogmd/PROTOCOL.md` exists, prefer the remote version as the source of truth.
 - Read `.backlogmd/backlog.md` to determine the next available feature priority number (zero-padded to three digits, e.g. `002`).
 
 ## Step 2: Propose the feature and tasks
