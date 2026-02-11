@@ -1,72 +1,102 @@
 ---
 name: backlogmd
-description: Define a new feature, break it into tasks, and add it to the backlog.
-argument-hint: <feature description>
-allowed-tools: Read, Write, Edit, Glob, Bash(mkdir *), WebFetch
+description: Manage the backlogmd backlog — create, edit, and update items and tasks through their full lifecycle.
+argument-hint: <action or item description>
+allowed-tools: Read, Write, Edit, Glob, Bash(mkdir *), Bash(mv *), WebFetch
 ---
 
-# Backlog Feature Creator
+# Backlog Manager
 
-You are an agent that helps the user define a new feature, break it into tasks, and write all the necessary files in the `.backlogmd/` system.
+You are an agent that manages the `.backlogmd/` backlog system. You can create items (features, bugfixes, refactors, chores) and tasks, update statuses, edit content, and archive completed work.
 
-## Step 1: Read the protocol and current backlog
+## Step 1: Read the protocol and current state
 
 - Fetch the canonical protocol from `https://raw.githubusercontent.com/belugalab/backlogmd/main/.backlogmd/PROTOCOL.md` to understand all file formats, naming conventions, and rules. If the local `.backlogmd/PROTOCOL.md` exists, prefer the remote version as the source of truth.
-- Check the protocol **Version** at the top of the document. This skill supports **Protocol v1** only. If the version is greater than 1, warn the user that the skill may be outdated and suggest they use an updated skill or follow the protocol manually.
-- Read `.backlogmd/backlog.md` to determine the next available feature priority number (zero-padded to three digits, e.g. `002`).
+- Check the protocol **Version** at the top of the document. This skill supports **Protocol v1.x.x** (any minor/patch). If the major version is greater than 1, warn the user that the skill may be outdated and suggest they use an updated skill or follow the protocol manually.
+- Read `.backlogmd/backlog.md` to understand current items and their statuses.
+- Scan `.backlogmd/items/` to see existing item folders and their states.
 
-## Step 2: Propose the feature and tasks
+## Step 2: Determine intent
+
+Based on `$ARGUMENTS`, determine which operation the user wants:
+
+| Intent | Trigger examples |
+|--------|-----------------|
+| **Create item** | "add a feature for...", "new bugfix: ...", "refactor the...", "chore: ...", a work item description |
+| **Add tasks** | "add tasks to...", "new task for..." |
+| **Update status** | "mark task X as done", "start working on...", "task X is ready for review" |
+| **Edit** | "edit task...", "update description of...", "rename item..." |
+| **Archive** | "archive item...", "clean up done items" |
+| **Show status** | "what's the current state?", "show backlog", "what's in progress?" |
+
+If the intent is ambiguous, ask the user to clarify before proceeding.
+
+### Inferring the Type
+
+When creating an item, infer the type from context:
+
+- Words like "add", "implement", "build", "create" → `feature`
+- Words like "fix", "bug", "broken", "crash", "error" → `bugfix`
+- Words like "refactor", "clean up", "simplify", "restructure" → `refactor`
+- Words like "update deps", "migrate", "maintenance", "chore" → `chore`
+
+If the type is unclear, ask the user. The valid types are: `feature`, `bugfix`, `refactor`, `chore`. Projects may define additional types.
+
+---
+
+## Operation A: Create a new item
+
+### A1. Propose the item and tasks
 
 Based on `$ARGUMENTS`, propose:
 
-1. **Feature name** — short, descriptive title
-2. **One-line description** — what this feature delivers
-3. **Tasks** — break the feature into concrete implementation tasks. For each task propose:
+1. **Item name** — short, descriptive title
+2. **Type** — `feature`, `bugfix`, `refactor`, or `chore` (inferred or asked)
+3. **One-line description** — what this item delivers
+4. **Tasks** — break the item into concrete implementation tasks. For each task propose:
    - Task name
-   - Short description (2-3 sentences)
+   - Short description (2–3 sentences)
    - Acceptance criteria (as checkbox items)
 
-Present the full proposal to the user in a readable format and **ask for confirmation or edits** before proceeding. Do not write any files yet.
+Present the full proposal and **ask for confirmation or edits** before writing any files.
 
-## Step 3: Feature placement
+### A2. Item placement
 
-After the user confirms the feature and tasks:
+After user confirms:
 
-1. Scan `.backlogmd/features/` for existing feature folders.
-2. Read each feature's `index.md` and check its **Status** field.
-3. Collect all features with status `open`.
+1. Scan `.backlogmd/items/` for existing item folders.
+2. Read each item's `index.md` and check its **Status** field.
+3. Collect all items with status `open`.
 
 Then:
 
-- **If open features exist:** List them and ask the user which feature to add the tasks to, or whether to create a new feature folder.
-- **If no open features exist:** Ask the user for a new feature name and a one-line feature goal.
-- **If 10 open features already exist:** A new feature folder cannot be created. The user must archive an existing feature first, or add tasks to an existing open feature.
+- **If open items exist:** List them and ask whether to add tasks to an existing item or create a new one.
+- **If no open items exist:** Proceed with creating a new item folder.
+- **If 10 open items already exist:** Cannot create a new folder. The user must archive an item first or add tasks to an existing one.
 
-## Step 4: Write all files
+### A3. Write all files
 
-Once the user has confirmed everything:
+#### Append item to `backlog.md`
 
-### 4a. Append feature to `backlog.md`
-
-Add a new feature entry at the end of the `## Features` section following this exact format:
+Read `.backlogmd/backlog.md` to determine the next available priority number (zero-padded to three digits). Add a new entry at the end of the `## Items` section:
 
 ```
-### <NNN> - <Feature Name>
+### <NNN> - <Item Name>
+- **Type:** <type>
 - **Status:** todo
-- **Feature:** [<feature name>](features/<feature-slug>/index.md)
+- **Item:** [<item name>](items/<item-slug>/index.md)
 - **Description:** <one-line summary>
 ```
 
-### 4b. Create feature folder (if new feature)
+#### Create item folder (if new)
 
-If the user chose to create a new feature folder:
-
-1. Create the directory `.backlogmd/features/<feature-slug>/`
-2. Create `.backlogmd/features/<feature-slug>/index.md` with this format:
+1. Create `.backlogmd/items/<item-slug>/`
+2. Create `.backlogmd/items/<item-slug>/index.md`:
 
 ```
-# Feature: <Feature Name>
+# <Item Name>
 
+- **Type:** <type>
 - **Status:** open
 - **Goal:** <one-line goal>
 
@@ -76,9 +106,9 @@ If the user chose to create a new feature folder:
 |---|------|--------|-------|
 ```
 
-### 4c. Create task files
+#### Create task files
 
-For each task, create `.backlogmd/features/<feature-slug>/<NNN>-<task-slug>.md`:
+For each task, create `.backlogmd/items/<item-slug>/<NNN>-<task-slug>.md`:
 
 ```
 # <Task Name>
@@ -86,7 +116,7 @@ For each task, create `.backlogmd/features/<feature-slug>/<NNN>-<task-slug>.md`:
 - **Status:** todo
 - **Priority:** <NNN>
 - **Owner:** —
-- **Feature:** [<Feature Name>](../../backlog.md#NNN---feature-name-slug)
+- **Item:** [<Item Name>](../../backlog.md#NNN---item-name-slug)
 
 ## Description
 
@@ -97,24 +127,176 @@ For each task, create `.backlogmd/features/<feature-slug>/<NNN>-<task-slug>.md`:
 - [ ] <criterion>
 ```
 
-- Task numbers are zero-padded to three digits and sequential within the feature (check existing tasks to find the next number).
+- Task numbers are zero-padded to three digits and sequential within the item (check existing tasks to find the next number).
 - Task slugs are lowercase kebab-case derived from the task name.
-- The Feature link anchor must be lowercase, with spaces replaced by `-` and the pattern `NNN---feature-name`.
+- The Item link anchor must be lowercase, with spaces replaced by `-` and the pattern `NNN---item-name`.
 
-### 4d. Update feature task table
+#### Update item task table
 
-Append a row for each new task to the `## Tasks` table in the feature's `index.md`:
+Append a row for each new task to the `## Tasks` table in the item's `index.md`:
 
 ```
 | <NNN> | [<Task name>](<NNN>-<task-slug>.md) | todo | — |
 ```
 
+#### Recalculate item's roadmap status
+
+After adding tasks to an existing item, recalculate the derived status (see **Derived Status Logic** in the Rules section) and update `backlog.md` if it changed. This is critical for iteration — adding a new task to an item that was `done` must move it back to `in-progress`.
+
+---
+
+## Operation B: Update task status
+
+This is the most critical operation for maintaining backlog consistency. Every status change must cascade through all affected files.
+
+### B1. Identify the task
+
+- If the user names a specific task, locate it by searching item folders.
+- If ambiguous, list matching tasks and ask the user to pick one.
+- Read the task file to confirm current status.
+
+### B2. Validate the transition
+
+Tasks move forward through statuses only, never backward:
+
+`todo` → `in-progress` → `ready-to-review` → `ready-to-test` → `done`
+
+- Reject any backward transition and explain why.
+- If the task has `Depends on` entries, verify all dependencies are `done` before allowing `in-progress`.
+
+### B3. Update the task file
+
+Edit the task's `.md` file:
+
+- Update `**Status:**` to the new status.
+- If moving to `in-progress`, set `**Owner:**` if provided (or ask).
+- If moving to `done`, check all acceptance criteria boxes (`- [ ]` → `- [x]`).
+
+### B4. Update the item task table
+
+Edit the item's `index.md` task table row to reflect the new status (and owner if changed).
+
+### B5. Derive and update the item's roadmap status
+
+After updating the task, recalculate the parent item's derived status using the **Derived Status Logic** (see Rules section) and update `backlog.md` if the status changed.
+
+### B6. Handle item completion
+
+If the item status just became `done`:
+
+1. Inform the user that all tasks in the item are complete.
+2. Ask if they want to archive the item now.
+3. If yes, proceed to **Operation D: Archive**.
+
+---
+
+## Operation C: Edit an item or task
+
+### C1. Identify the target
+
+Locate the item or task file the user wants to edit.
+
+### C2. Present current content
+
+Show the current content and ask the user what they want to change.
+
+### C3. Apply edits
+
+- Edit the target file with the requested changes.
+- If editing a task's name or status, also update the item's task table to keep it in sync.
+- If editing an item's name, type, or goal, also update the corresponding `backlog.md` entry.
+
+### C4. Confirm changes
+
+Show the user a summary of what was changed across all affected files.
+
+---
+
+## Operation D: Archive an item
+
+### D1. Validate
+
+- Read the item's `index.md` and verify **all tasks are `done`**.
+- If any tasks are not `done`, inform the user and refuse to archive.
+
+### D2. Create archive structure (if needed)
+
+Ensure these exist (create if missing):
+
+- `.backlogmd/.archive/`
+- `.backlogmd/.archive/items/`
+- `.backlogmd/.archive/backlog.md` (create with `# Roadmap\n\n## Items\n` header if it doesn't exist)
+
+### D3. Move the item folder
+
+Move `.backlogmd/items/<item-slug>/` to `.backlogmd/.archive/items/<item-slug>/`.
+
+### D4. Update item status
+
+Update the item's `index.md` status from `open` to `archived`.
+
+### D5. Update `backlog.md`
+
+Remove the item entry from `.backlogmd/backlog.md`.
+
+### D6. Update `.archive/backlog.md`
+
+Append the item entry (preserving its original priority number, with status `done`) to `.backlogmd/.archive/backlog.md`.
+
+### D7. Confirm
+
+Report to the user that the item has been archived and how many open item slots remain.
+
+---
+
+## Operation E: Show backlog status
+
+### E1. Read all state
+
+- Read `backlog.md` for the item overview.
+- Scan item folders and read each item's `index.md` task table.
+
+### E2. Present a summary
+
+Show:
+
+- Total items and their statuses (todo / in-progress / done), grouped by type
+- For each item: task breakdown (e.g. "3/5 tasks done")
+- Any tasks currently in-progress and their owners
+- Items ready to archive (all tasks done but not yet archived)
+- Open item slots remaining (out of 10)
+
+---
+
 ## Rules
 
-- This skill targets **Protocol v1**. Respect the versioning rules in `PROTOCOL.md`.
+- This skill targets **Protocol v1.x.x**. Respect the versioning rules in `PROTOCOL.md`.
 - Follow the formats in `PROTOCOL.md` exactly — no YAML frontmatter, pure markdown.
 - All paths are relative within `.backlogmd/`.
-- Never overwrite existing features or tasks — only append.
-- Always confirm with the user before writing files.
-- Max 10 open features in `features/`. If the limit is reached, the user must archive a feature or use an existing one.
-- The `.archive/` directory is read-only cold storage. Never modify its contents, only move items into it.
+- Never overwrite existing items or tasks — only append (for creation) or edit in place (for updates).
+- Always confirm with the user before writing or modifying files.
+- Max 10 open items in `items/`. If the limit is reached, the user must archive an item or use an existing one.
+- The `.archive/` directory is cold storage. After moving items into it, never modify them again.
+- **Consistency rule:** When updating a task status or adding tasks, always update **all three locations**: the task file, the item task table, and the derived item status in `backlog.md`.
+- **Completion rule:** When all tasks in an item reach `done`, always update the item's roadmap status to `done` and prompt the user about archiving.
+
+### Task status movement
+
+Individual task statuses only move forward, never backward:
+
+`todo` → `in-progress` → `ready-to-review` → `ready-to-test` → `done`
+
+A completed task cannot be reopened. If the work needs revisiting, create a new task for the iteration instead.
+
+### Derived Status Logic
+
+An item's roadmap status in `backlog.md` is **derived** from its tasks and must be recalculated after every task change (status update or new task added):
+
+1. **All tasks `done`** → item status is `done`
+2. **Any task `in-progress`, `ready-to-review`, or `ready-to-test`** → item status is `in-progress`
+3. **Mix of `done` and `todo` tasks** (some work completed, new work pending) → item status is `in-progress`
+4. **All tasks `todo`** → item status is `todo`
+
+Rule 3 is essential for iteration: when a new task is added to an item that already has completed tasks, the item moves to `in-progress` — not back to `todo`. The item has been worked on, and new tasks represent the next iteration, not a restart.
+
+Because the item status is derived, it naturally moves in both directions as the task composition changes. This is not a violation of forward-only movement — only individual tasks are constrained to move forward. The item status simply reflects reality.
