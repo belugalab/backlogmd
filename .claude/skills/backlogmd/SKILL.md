@@ -173,21 +173,23 @@ Tasks move forward through statuses only, never backward:
 - Reject any backward transition and explain why.
 - If the task has `Depends on` entries, verify all dependencies are `done` before allowing `in-progress`.
 
-### B3. Update the task file
+### B3. Update all three locations
 
-Edit the task's `.md` file:
+**Every status change — not just completion — must update all three files:**
 
-- Update `**Status:**` to the new status.
-- If moving to `in-progress`, set `**Owner:**` if provided (or ask).
-- If moving to `done`, check all acceptance criteria boxes (`- [ ]` → `- [x]`).
+1. **Task file** (`<NNN>-<task-slug>.md`):
+   - Update `**Status:**` to the new status.
+   - If moving to `in-progress`, set `**Owner:**` if provided (or ask).
+   - If moving to `done`, check all acceptance criteria boxes (`- [ ]` → `- [x]`).
 
-### B4. Update the item task table
+2. **Item task table** (`index.md`):
+   - Edit the task's row to reflect the new status (and owner if changed).
 
-Edit the item's `index.md` task table row to reflect the new status (and owner if changed).
+3. **Item's roadmap status** (`backlog.md`):
+   - Recalculate the derived status using the **Derived Status Logic** (see Rules section) and update `backlog.md` if it changed.
+   - Example: moving the first task to `in-progress` must also move the item from `todo` to `in-progress` in `backlog.md`.
 
-### B5. Derive and update the item's roadmap status
-
-After updating the task, recalculate the parent item's derived status using the **Derived Status Logic** (see Rules section) and update `backlog.md` if the status changed.
+Do not skip step 3. This is what makes progress visible in the backlog.
 
 ### B6. Handle item completion
 

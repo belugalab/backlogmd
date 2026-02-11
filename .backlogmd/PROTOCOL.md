@@ -156,6 +156,5 @@ Rules:
 4. When all tasks in an item are `done`, the item may be archived. Archiving moves the item folder to `.archive/items/` and moves any newly `done` roadmap entries to `.archive/backlog.md`.
 5. A task cannot move to `in-progress` unless all of its dependencies are `done`.
 6. Circular dependencies are not allowed.
-7. When an agent begins work on a task, it must update the task status to `in-progress` in both the task file and the item's task table.
-8. When an agent completes a task, it must update the task status to `done` in both the task file and the item's task table.
-9. When all tasks in an item reach `done`, the item's roadmap status in `backlog.md` must be updated to reflect the derived status.
+7. When an agent changes a task's status, it must update **all three locations**: the task file, the item's task table in `index.md`, and the item's derived status in `backlog.md`. This applies to every status transition, not just completion.
+8. When all tasks in an item reach `done`, the item may be archived (see rule 4).
