@@ -106,7 +106,9 @@ DependsOn: [<task-slug>](relative-path-to-task.md)
 ### Archive (`.archive/`)
 
 - Cold storage — agents skip `.archive/` during normal operations.
-- When an item is completed, move its folder from `work/<slug>/` to `.archive/<YYYY>/<MM>/<slug>/` (using the current year and month) and remove the slug from `backlog.md`.
+- Archiving is triggered ONLY when `work/` reaches 50 items. It is NOT triggered by item completion.
+- When archiving is needed, archive the lowest-priority-number item first (FIFO — first in, first out). All its tasks must be `done`.
+- Move the item folder from `work/<slug>/` to `.archive/<YYYY>/<MM>/<slug>/` and remove the entry from `backlog.md`.
 - Archive contents are read-only.
 
 ### Workflow Rules
@@ -115,8 +117,8 @@ DependsOn: [<task-slug>](relative-path-to-task.md)
 2. A task cannot move to `in-progress` if its `DependsOn` task is not `done`.
 3. Circular dependencies are not allowed.
 4. When an agent changes a task's status, it must update the task file.
-5. When all tasks in an item are `done`, the item may be archived.
-6. Max 50 open items in `work/` at any time.
+5. When all tasks in an item are `done`, the item stays in `work/`. Do NOT archive automatically.
+6. Max 50 items in `work/` at any time. When the limit is reached and a new item must be created, archive the lowest-numbered completed item (FIFO) to make room. If no completed items exist, the new item cannot be created.
 
 ---
 
@@ -140,16 +142,16 @@ Inform the user that the backlog has been initialized, then continue to Step 2.
 
 Based on `$ARGUMENTS`, determine which operation the user wants:
 
-| Intent            | Trigger examples                                                                                    |
-| ----------------- | --------------------------------------------------------------------------------------------------- |
+| Intent            | Trigger examples                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
 | **Init backlog**  | "init backlog", "set up backlogmd", "initialize" (also happens automatically if `.backlogmd/` doesn't exist) |
-| **Create item**   | "add a feature for...", "new bugfix: ...", "refactor the...", "chore: ...", a work item description |
-| **Add tasks**     | "add tasks to...", "new task for..."                                                                |
-| **Update status** | "mark task X as done", "start working on...", "task X is blocked"                                   |
-| **Edit**          | "edit task...", "update description of...", "rename item..."                                        |
-| **Archive**       | "archive item...", "clean up done items"                                                            |
-| **Show status**   | "what's the current state?", "show backlog", "what's in progress?"                                  |
-| **Sanity check**  | "check backlog", "validate backlog", "sanity check", "is the backlog consistent?"                   |
+| **Create item**   | "add a feature for...", "new bugfix: ...", "refactor the...", "chore: ...", a work item description          |
+| **Add tasks**     | "add tasks to...", "new task for..."                                                                         |
+| **Update status** | "mark task X as done", "start working on...", "task X is blocked"                                            |
+| **Edit**          | "edit task...", "update description of...", "rename item..."                                                 |
+| **Archive**       | "archive item...", "clean up done items"                                                                     |
+| **Show status**   | "what's the current state?", "show backlog", "what's in progress?"                                           |
+| **Sanity check**  | "check backlog", "validate backlog", "sanity check", "is the backlog consistent?"                            |
 
 If the intent is ambiguous, ask the user to clarify before proceeding.
 
@@ -192,7 +194,7 @@ Then:
 
 - **If open items exist:** List them and ask whether to add tasks to an existing item or create a new one.
 - **If no open items exist:** Proceed with creating a new item folder.
-- **If 50 open items already exist:** Cannot create a new folder. The user must archive an item first or add tasks to an existing one.
+- **If 50 items already exist:** Auto-archive the lowest-numbered completed item (FIFO) to make room, then create the new item. If no completed items exist, inform the user that the limit is reached and no items can be archived.
 
 ### A3. Write all files
 
@@ -257,8 +259,7 @@ If moving to `done`, check all acceptance criteria boxes (`- [ ]` → `- [x]`).
 If all tasks in the item are now `done`:
 
 1. Inform the user that all tasks in the item are complete.
-2. Ask if they want to archive the item now.
-3. If yes, proceed to **Operation D: Archive**.
+2. Do NOT suggest archiving. Completed items stay in `work/` until the 50-item limit forces archival.
 
 ---
 
