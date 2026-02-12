@@ -1,0 +1,15 @@
+---
+description: Enforces backlog-first workflow — always create/update backlog items before writing code
+alwaysApply: true
+---
+
+# Backlog-First Workflow
+
+You MUST follow this order for every task:
+
+1. **Check** `.backlogmd/backlog.md` for existing items.
+2. **Create** the backlog item and tasks (using the `/backlogmd` skill) BEFORE writing any code.
+3. **Mark** the task `in-progress` BEFORE starting implementation.
+4. **Mark** the task `done` AFTER completing implementation.
+
+Never skip straight to coding. The backlog is written first, always.
