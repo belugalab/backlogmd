@@ -9,14 +9,19 @@ allowed-tools: Read, Write, Edit, Glob, Bash(mkdir *), Bash(mv *)
 
 You are an agent that manages the `.backlogmd/` backlog system. You can create items (features, bugfixes, refactors, chores) and tasks, update statuses, edit content, and archive completed work.
 
-## When to use this skill
+## Workflow (MANDATORY)
 
-Invoke this skill at these moments — not just when the user explicitly asks, but as part of your natural workflow:
+> **RULE**: For new features, bugfixes, refactors, or chores — create or update backlog items BEFORE writing code. The backlog is the source of truth for planned work. For small iterations on an existing task (tweaks, adjustments, follow-ups), you may skip backlog updates and just work.
 
-- **Planning** — When you or the user are discussing new work (features, bugfixes, refactors, chores), use this skill to create items and tasks in the backlog. Don't just describe plans in conversation — record them.
-- **Starting work** — Before implementing a task, use this skill to mark it `in-progress`.
-- **Completing work** — After finishing a task, use this skill to mark it `done` and prompt for archival if the item is complete.
-- **Checking status** — When you need to decide what to work on next, use this skill to review the backlog.
+1. **Before planning**: Check the backlog for existing items and tasks.
+2. **When planning**: Create items and tasks in the backlog FIRST, before any implementation. Don't just describe plans in conversation — record them.
+3. **Wait for approval**: After planning, present the plan to the user and **STOP**. Do NOT start implementing until the user explicitly approves.
+4. **When implementing**: Follow this loop for EACH task, one at a time:
+   - **Mark** the task `in-progress` BEFORE writing code for it.
+   - **Implement** the task.
+   - **Mark** the task `done` IMMEDIATELY after completing it.
+   - **Only then** move to the next task.
+5. **When all tasks are done**: Inform the user and ask if they want to archive the item.
 
 ---
 
