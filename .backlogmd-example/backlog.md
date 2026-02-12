@@ -1,2 +1,2 @@
-- [001-chore-project-foundation](001-chore-project-fundation/index.md)
-- [002-ci-initialize-github-actions](002-ci-initialize-github-actions/index.md)
+- [001-chore-project-foundation](work/001-chore-project-foundation/index.md)
+- [002-ci-initialize-github-actions](work/002-ci-initialize-github-actions/index.md)
