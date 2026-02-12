@@ -1,4 +1,4 @@
-# backlogmd
+# backlog.md
 
 A markdown-based backlog system designed for agentic development. Define work items and tasks in plain `.md` files — no databases, no SaaS lock-in, just your repo.
 
