@@ -1,0 +1,61 @@
+{
+  "specVersion": "3.0.0",
+  "updatedAt": "2026-02-13T16:00:00Z",
+  "openItemCount": 2,
+  "items": [
+    {
+      "id": "001",
+      "slug": "chore-project-foundation",
+      "path": "work/001-chore-project-foundation",
+      "status": "open",
+      "updated": "2026-02-13T16:00:00Z",
+      "tasks": [
+        {
+          "tid": "001",
+          "slug": "install-next-react-tailwind",
+          "file": "001-install-next-react-tailwind.md",
+          "t": "Install Next.js, React and Tailwind",
+          "s": "open",
+          "p": 1,
+          "dep": [],
+          "a": "",
+          "h": false,
+          "expiresAt": null
+        },
+        {
+          "tid": "002",
+          "slug": "docker-setup",
+          "file": "002-docker-setup.md",
+          "t": "Docker setup",
+          "s": "open",
+          "p": 2,
+          "dep": ["001"],
+          "a": "",
+          "h": false,
+          "expiresAt": null
+        }
+      ]
+    },
+    {
+      "id": "002",
+      "slug": "ci-initialize-github-actions",
+      "path": "work/002-ci-initialize-github-actions",
+      "status": "open",
+      "updated": "2026-02-13T16:00:00Z",
+      "tasks": [
+        {
+          "tid": "001",
+          "slug": "ci-cd-setup",
+          "file": "001-ci-cd-setup.md",
+          "t": "CI/CD setup",
+          "s": "open",
+          "p": 1,
+          "dep": [],
+          "a": "",
+          "h": false,
+          "expiresAt": null
+        }
+      ]
+    }
+  ]
+}
