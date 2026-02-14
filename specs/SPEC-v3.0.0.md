@@ -1,6 +1,6 @@
 # Specification
 
-**Version:** 3.0.1
+**Version:** 3.0.0
 
 Single source of truth for the `.backlogmd/` system — markdown-based agile/kanban for agentic development. Agents must read this file before interacting with the backlog.
 
@@ -65,7 +65,7 @@ All paths in this document and throughout the system are relative within `.backl
 t: Add login form
 s: plan # plan | open | reserved | ip | review | block | done
 p: 10 # priority within item (lower = higher priority)
-dep: ["work/002-ci-initialize-github-actions/001-ci-cd-setup.md"] # optional: paths (relative to .backlogmd/) to tasks that must be done before this task can start
+dep: ["002"] # optional list of task id strings within the same item
 a: "" # assignee/agent id; empty string if unassigned
 h: false # true if human review required before done
 expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
@@ -84,10 +84,6 @@ expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
 - [ ] <criterion>
 ````
 
-### Dependencies
-
-- **`dep`** lists paths to **other tasks** that must be **done** before this task can move to `ip`. Each entry is a path relative to `.backlogmd/`: `work/<item-id>-<slug>/<tid>-<task-slug>.md` (e.g. `work/002-ci-initialize-github-actions/001-ci-cd-setup.md`). Dependencies may be in the same item or in another item (cross-item). Agents must wait for each referenced work/task to be complete (`s: done`) before starting this task.
-
 ### Rules
 
 - Filenames: `<tid>-<task-slug>.md`; `tid` zero-padded, unique per item.
@@ -99,7 +95,7 @@ expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
   - `review` — awaiting human approval. Set when `h: true` and work is complete. Requires `a`.
   - `block` — blocked by an external dependency. `a` is preserved.
   - `done` — complete. `a` is cleared.
-- **`dep`**: See **Dependencies** above. No self-reference; no duplicates; no cycles (backlog must remain a DAG).
+- `dep` values are **quoted strings** matching task IDs (e.g., `["001", "003"]`). This avoids YAML interpreting zero-padded numbers as integers. `dep` must not include the task's own `tid`, and duplicates are invalid.
 - Three HTML comment markers only: `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, `<!-- ACCEPTANCE -->`.
 - Acceptance criteria use markdown checkboxes.
 - No YAML frontmatter outside the fenced block; keep metadata lines ≤ 120 chars.
@@ -112,7 +108,7 @@ Machine-readable index. Agents MUST read the manifest before acting and MUST upd
 
 ```jsonc
 {
-  "specVersion": "3.0.1",
+  "specVersion": "3.0.0",
   "updatedAt": "2026-02-13T12:00:00Z", // set on every manifest write
   "openItemCount": 1,
   "items": [
@@ -130,7 +126,7 @@ Machine-readable index. Agents MUST read the manifest before acting and MUST upd
           "t": "Set up repository structure",
           "s": "done",
           "p": 5,
-          "dep": []
+          "dep": [],
           "a": "",
           "h": false,
           "expiresAt": null,
@@ -142,7 +138,7 @@ Machine-readable index. Agents MUST read the manifest before acting and MUST upd
           "t": "Initialize CI pipeline",
           "s": "reserved",
           "p": 10,
-          "dep": ["work/001-chore-project-foundation/001-setup-repo.md"],
+          "dep": ["001"],
           "a": "alice",
           "h": true,
           "expiresAt": "2026-02-13T15:00:00Z",
@@ -156,7 +152,7 @@ Machine-readable index. Agents MUST read the manifest before acting and MUST upd
 ### Field notes
 
 - Item `status` (`open | archived`) is distinct from task `s` — they track different lifecycles.
-- Each task entry includes `slug` and `file` so agents can resolve paths without reading `index.md`. Task `dep` in the manifest uses the same path format as in task files: `work/<item-id>-<slug>/<tid>-<task-slug>.md` (relative to `.backlogmd/`); cross-item dependencies are allowed.
+- Each task entry includes `slug` and `file` so agents can resolve paths without reading `index.md`.
 - `t` (title) is included for quick lookups and dashboard views.
 - `updatedAt` at the root MUST be set to the current ISO 8601 timestamp (UTC, with trailing `Z`) on every manifest write.
 - `expiresAt` is `null` (not `""`) when unset, in both JSON and YAML.
@@ -181,7 +177,7 @@ File-based systems cannot provide true atomicity. To minimize inconsistency:
 
 ### Starting work
 
-4. Set `s: ip` (keep `a`). A task cannot move to `ip` until **every** dependency in its `dep` list is done: each `dep` entry is a path `work/<item-id>-<slug>/<tid>-<task-slug>.md`; resolve that path to the corresponding task in the manifest and require `s === "done"` for each. Agents block on the full work/task (each referenced task) being done before starting.
+4. Set `s: ip` (keep `a`). A task cannot move to `ip` if any task ID in its `dep` list has `s` other than `done`.
 
 ### Completing work
 
@@ -234,8 +230,8 @@ Any active state ──→ block ──→ ip or open
 - `ip → done`: completion (only valid when `h: false`).
 - `ip → review → done`: completion with human gate (required when `h: true`).
 - `block`: reachable from `reserved`, `ip`, or `review`. Returns to `ip` (unblocked) or `open` (released).
-- A task cannot move to `ip` until every referenced task in `dep` (by path `work/.../<tid>-<task-slug>.md`) has `s: done`. Agents wait for each dependency (that work/task) to be fully done before starting.
-- No circular dependencies. The set of all tasks and their `dep` paths must form a DAG. Agents adding `dep` entries must verify no cycle is introduced across the backlog.
+- A task cannot move to `ip` if any `dep` is not `done`.
+- No circular dependencies. Agents adding `dep` entries must verify no cycle is introduced; rule of thumb: each `dep` should reference a task with `tid` lower than the current task to keep the DAG by numbering (recommended).
 - Task edits must update both the task file and manifest (manifest first).
 - When all tasks in an item are `done`, archive the item.
 
@@ -263,6 +259,6 @@ Agents should reconcile on read if a mismatch is detected, and log a warning.
 ## Versioning
 
 - Semantic Versioning (`MAJOR.MINOR.PATCH`).
-- This file is 3.0.1. Prior specs live in `specs/`.
+- This file is 3.0.0. Prior specs live in `specs/`.
 - See `SPEC-CHANGELOG.md` for history and migrations.
 - Agents may reject if `specVersion` in `manifest.json` is unsupported.

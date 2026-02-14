@@ -4,6 +4,21 @@
 
 ---
 
+## 3.0.1
+
+- **Summary:** Clarified and standardized task dependency format. Dependencies are now explicit work/task paths so agents know exactly which item and task must be done before starting.
+- **Breaking changes:**
+  - **`dep` format** — Previously `dep` was a list of task ID strings within the same item (e.g. `["001", "003"]`). It is now a list of **paths** relative to `.backlogmd/`: `work/<item-id>-<slug>/<tid>-<task-slug>.md` (e.g. `["work/002-ci-initialize-github-actions/001-ci-cd-setup.md"]`). Same format in both task file YAML and `manifest.json`.
+- **Added:**
+  - **Dependencies** subsection under Task Format: defines path format, allows cross-item dependencies, and states that agents must wait for each referenced task to be `s: done` before moving a task to `ip`.
+  - Manifest field note: task `dep` in the manifest uses the same path format; cross-item dependencies are allowed.
+- **Changed:**
+  - Claim protocol "Starting work" (rule 4): a task cannot move to `ip` until every `dep` entry is resolved to a task in the manifest and that task has `s === "done"`.
+  - Workflow rules: dependency rule and cycle check now apply across the whole backlog (DAG over all tasks and their `dep` paths), not only within an item.
+- **Migration (3.0.0 → 3.0.1):** For each task that has `dep` with the old format (e.g. `["001", "002"]`), rewrite each ID to the full path for the same item: `work/<this-item-path>/<tid>-<task-slug>.md`. Example: in item `001-chore-project-foundation`, `dep: ["002"]` becomes `dep: ["work/001-chore-project-foundation/002-docker-setup.md"]` (use the actual task file name from that item). Cross-item deps were not expressible in 3.0.0; add them using the new path format.
+
+---
+
 ## 3.0.0
 
 - **Summary:** Introduced machine-readable manifest, YAML task metadata with short keys, agent claim/reservation protocol, human-in-the-loop gating, reconciliation rules, and expanded status lifecycle.

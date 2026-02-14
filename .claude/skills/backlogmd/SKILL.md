@@ -18,7 +18,7 @@ You are an agent that manages the `.backlogmd/` backlog system. You can create i
 3. **Wait for approval**: After planning, present the plan to the user and **STOP**. Do NOT start implementing until the user explicitly approves.
 4. **When implementing**: Follow this loop for EACH task, one at a time:
    - **Claim** the task: set `s: reserved`, `a: <agent-id>`.
-   - **Start** the task: set `s: ip` (verify deps are `done` first).
+   - **Start** the task: set `s: ip` (verify every `dep` path resolves to a task with `s: done` first).
    - **Implement** the task.
    - **Complete** the task: if `h: false`, set `s: done` and clear `a`. If `h: true`, set `s: review` and **stop** — only a human may move `review → done`.
    - **Only then** move to the next task.
@@ -27,7 +27,9 @@ You are an agent that manages the `.backlogmd/` backlog system. You can create i
 
 ---
 
-## Spec v3.0.0 (embedded)
+## Spec v3.0.1 (embedded)
+
+Single source of truth for `.backlogmd/` is `SPEC.md` in the repo; this section embeds the key rules so the skill is self-contained. When in doubt, prefer `SPEC.md`.
 
 ### Directory Structure
 
@@ -86,7 +88,7 @@ All paths are relative within `.backlogmd/`.
 t: Add login form
 s: plan # plan | open | reserved | ip | review | block | done
 p: 10 # priority within item (lower = higher priority)
-dep: ["002"] # optional list of task id strings within the same item
+dep: ["work/002-ci-initialize-github-actions/001-ci-cd-setup.md"] # optional: paths (relative to .backlogmd/) to tasks that must be done before this task can start
 a: "" # assignee/agent id; empty string if unassigned
 h: false # true if human review required before done
 expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
@@ -114,7 +116,7 @@ expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
   - `review` — awaiting human approval. Set when `h: true` and work is complete. Requires `a`.
   - `block` — blocked by an external dependency. `a` is preserved.
   - `done` — complete. `a` is cleared.
-- `dep` values are **quoted strings** matching task IDs (e.g., `["001", "003"]`). `dep` must not include the task's own `tid`, and duplicates are invalid.
+- **Dependencies (`dep`):** Each entry is a path relative to `.backlogmd/`: `work/<item-id>-<slug>/<tid>-<task-slug>.md` (e.g. `work/002-ci-initialize-github-actions/001-ci-cd-setup.md`). Cross-item deps allowed. Agents must wait for each referenced task to be `s: done` before moving to `ip`. No self-reference; no duplicates; no cycles (backlog must remain a DAG).
 - Three HTML comment markers only: `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, `<!-- ACCEPTANCE -->`.
 - Acceptance criteria use markdown checkboxes.
 - No YAML frontmatter outside the fenced block; keep metadata lines ≤ 120 chars.
@@ -125,7 +127,7 @@ Machine-readable index. Agents MUST read the manifest before acting and MUST upd
 
 ```jsonc
 {
-  "specVersion": "3.0.0",
+  "specVersion": "3.0.1",
   "updatedAt": "2026-02-13T12:00:00Z", // set on every manifest write
   "openItemCount": 1,
   "items": [
@@ -147,6 +149,18 @@ Machine-readable index. Agents MUST read the manifest before acting and MUST upd
           "a": "",
           "h": false,
           "expiresAt": null
+        },
+        {
+          "tid": "002",
+          "slug": "init-ci",
+          "file": "002-init-ci.md",
+          "t": "Initialize CI pipeline",
+          "s": "reserved",
+          "p": 10,
+          "dep": ["work/001-chore-project-foundation/001-setup-repo.md"],
+          "a": "alice",
+          "h": true,
+          "expiresAt": "2026-02-13T15:00:00Z"
         }
       ]
     }
@@ -155,7 +169,7 @@ Machine-readable index. Agents MUST read the manifest before acting and MUST upd
 ```
 
 - Item `status` (`open | archived`) is distinct from task `s`.
-- Each task entry includes `slug` and `file` so agents can resolve paths without reading `index.md`.
+- Each task entry includes `slug` and `file` so agents can resolve paths without reading `index.md`. Task `dep` uses the same path format: `work/<item-id>-<slug>/<tid>-<task-slug>.md`; cross-item dependencies are allowed.
 - `updatedAt` at the root MUST be set to current ISO 8601 timestamp (UTC, trailing `Z`) on every write.
 - `expiresAt` is `null` (not `""`) when unset, in both JSON and YAML.
 
@@ -168,7 +182,7 @@ Machine-readable index. Agents MUST read the manifest before acting and MUST upd
 
 **Claiming:** Re-read manifest. If `s` is `open`, set `s: reserved`, `a: <agent-id>`, optionally `expiresAt`. Only `open` tasks may be claimed (`plan` must be promoted to `open` first).
 
-**Starting work:** Set `s: ip` (keep `a`). A task cannot move to `ip` if any `dep` is not `done`.
+**Starting work:** Set `s: ip` (keep `a`). A task cannot move to `ip` until **every** dependency in `dep` is done: each `dep` entry is a path `work/<item-id>-<slug>/<tid>-<task-slug>.md`; resolve that path to the task in the manifest and require `s === "done"` for each. Agents wait for each referenced work/task to be done before starting.
 
 **Completing:** If `h: false`: set `s: done`, clear `a`. If `h: true`: set `s: review` and **stop** — direct `ip → done` is invalid when `h: true`.
 
@@ -186,6 +200,8 @@ plan ──→ open ──→ reserved ──→ ip ──→ done           (h:
 
 Any active state ──→ block ──→ ip or open
 ```
+
+- No circular dependencies: the set of all tasks and their `dep` paths must form a DAG across the backlog.
 
 ### Archive
 
@@ -228,7 +244,7 @@ If `.backlogmd/` does not exist, create the initial structure:
 
 ```json
 {
-  "specVersion": "3.0.0",
+  "specVersion": "3.0.1",
   "updatedAt": "<current ISO 8601 UTC>",
   "openItemCount": 0,
   "items": []
@@ -344,7 +360,7 @@ Any active state ──→ block ──→ ip or open
 
 - `plan → open`: promotion (human or authorized agent only).
 - `open → reserved`: claim — set `a` to agent ID, optionally set `expiresAt`.
-- `reserved → ip`: start work — verify all `dep` tasks are `done`.
+- `reserved → ip`: start work — verify every `dep` path resolves to a task with `s: done`.
 - `ip → done`: only valid when `h: false`. Clear `a`.
 - `ip → review`: required when `h: true`. Keep `a`. Agent must **stop**.
 - `review → done`: human only. Clear `a`.
@@ -442,7 +458,7 @@ Validate that the entire `.backlogmd/` system is consistent. Read all files and 
 
 - [ ] `backlog.md` exists.
 - [ ] `manifest.json` exists and is valid JSON.
-- [ ] `manifest.json` `specVersion` is `"3.0.0"`.
+- [ ] `manifest.json` `specVersion` is `"3.0.1"`.
 - [ ] Every item in `backlog.md` has a corresponding folder in `work/`.
 - [ ] Every item folder has an `index.md`.
 - [ ] Every task file referenced in an item's `index.md` exists.
@@ -456,7 +472,7 @@ Validate that the entire `.backlogmd/` system is consistent. Read all files and 
 - [ ] Every task file has `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, and `<!-- ACCEPTANCE -->` markers.
 - [ ] Every task has YAML metadata with required fields: `t`, `s`, `p`, `dep`, `a`, `h`, `expiresAt`.
 - [ ] Task statuses are valid (`plan`, `open`, `reserved`, `ip`, `review`, `block`, `done`).
-- [ ] `dep` values are quoted strings matching task IDs; no self-references or duplicates.
+- [ ] `dep` values are paths relative to `.backlogmd/`: `work/<item-id>-<slug>/<tid>-<task-slug>.md`; no self-references, no duplicates, no cycles (DAG across backlog).
 - [ ] Item IDs and task IDs are zero-padded (min 3 digits) and unique in their scope.
 - [ ] Slugs are lowercase kebab-case.
 - [ ] `reserved`, `ip`, `review` tasks have non-empty `a`. `done` tasks have empty `a`.
@@ -471,8 +487,8 @@ Validate that the entire `.backlogmd/` system is consistent. Read all files and 
 
 ### F5. Validate dependencies and workflow
 
-- [ ] No circular dependencies within an item.
-- [ ] No task is `ip` while any of its `dep` tasks is not `done`.
+- [ ] No circular dependencies across the backlog (all `dep` paths form a DAG).
+- [ ] No task is `ip` while any of its `dep` (resolved by path to manifest task) is not `done`.
 - [ ] No task with `h: true` has transitioned directly from `ip` to `done` (should go through `review`).
 
 ### F6. Validate archive
