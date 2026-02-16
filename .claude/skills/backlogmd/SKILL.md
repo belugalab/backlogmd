@@ -14,12 +14,12 @@ You are an agent that manages the `.backlogmd/` backlog system. You can create i
 > **RULE**: For new features, bugfixes, refactors, or chores — create or update backlog items BEFORE writing code. The backlog is the source of truth for planned work. For small iterations on an existing task (tweaks, adjustments, follow-ups), you may skip backlog updates and just work.
 
 1. **Before planning**: List `.backlogmd/work/`, read each item's `index.md` (metadata, CONTEXT) and list task files to see existing items and tasks.
-2. **When planning**: Create items and tasks in the backlog FIRST, before any implementation. Don't just describe plans in conversation — record them. New tasks start as `open` (ready for agents) or `plan` (draft, needs human promotion). Item `status` in `index.md`: `plan` | `open` | `in-progress` | `done`.
+2. **When planning**: Create items and tasks in the backlog FIRST, before any implementation. Don't just describe plans in conversation — record them. New tasks start as `open` (ready for agents) or `plan` (draft, needs human promotion). Item `status` in `index.md`: `plan` | `open` | `claimed` | `in-progress` | `done`; optional `assignee` at work level.
 3. **Wait for approval**: After planning, present the plan to the user and **STOP**. Do NOT start implementing until the user explicitly approves.
 4. **When implementing**: Follow this loop for EACH task, one at a time:
-   - **Start** the task: set `status: in-progress`, `assignee: <agent-id>` (and optionally `expiresAt`) in the task file. First verify every `dep` path resolves to a task file with `status: done`. Read the item's `index.md` (especially `<!-- CONTEXT -->`) and any `<tid>-<task-slug>-feedback.md` if present.
+   - **Start** the task: set `status: in-progress`, `assignee: <agent-id>` (and optionally `expiresAt`) in the task file; set the item's `index.md` to `status: claimed` or `in-progress` and `assignee: <agent-id>`. First verify every `dep` path resolves to a task file with `status: done`. Read the item's `index.md` (especially `<!-- CONTEXT -->`) and any `<tid>-<task-slug>-feedback.md` if present.
    - **Implement** the task.
-   - **Complete** the task: if `requiresHumanReview: false`, set `status: done` and clear `assignee`. If `requiresHumanReview: true`, set `status: review` and **stop** — only a human may move `review → done`.
+   - **Complete** the task: if `requiresHumanReview: false`, set `status: done` and clear `assignee` in the task file; if all tasks in the item are done, set item `status: done` and clear item `assignee`. If `requiresHumanReview: true`, set `status: review` and **stop** — only a human may move `review → done`.
    - **Only then** move to the next task.
    - **Writes**: Task edits → task file only. Item-level edits → `index.md` only. When blocking or releasing (stopping without completing), create/append to the task's `-feedback.md` file.
 5. **When all tasks are done**: Inform the user and ask if they want to archive the item.
@@ -50,7 +50,7 @@ All paths are relative within `.backlogmd/`.
 
 ### Open items
 
-- **Open items** are the directories under `work/`. Agents discover work by listing `work/`, then for each item directory reading `index.md` (metadata, including item `status`, and `<!-- CONTEXT -->`) and listing task files (filenames matching `<tid>-<task-slug>.md`). Items with `status: plan` are not ready for agents; items with `status: open` may have tasks ready to start.
+- **Open items** are the directories under `work/`. Agents discover work by listing `work/`, then for each item directory reading `index.md` (metadata, including item `status`, and `<!-- CONTEXT -->`) and listing task files (filenames matching `<tid>-<task-slug>.md`). Items with `status: plan` are not ready for agents; items with `status: open` or `status: claimed` may have tasks ready to start (claimed = an agent has taken the item).
 - **Archived items** are under `z-archive/`; agents skip them for active work.
 - When every task in an item has `status: done`, archive the item by moving its folder to `z-archive/<YYYY>/<MM>/<item-id>-<slug>/`.
 
@@ -73,7 +73,8 @@ All paths are relative within `.backlogmd/`.
 
 ```yaml
 work: Add login flow # work item title
-status: open # plan | open | in-progress | done
+status: open # plan | open | claimed | in-progress | done
+assignee: "" # agent id when work item is claimed (required when status: claimed); empty when open or done
 ```
 
 <!-- DESCRIPTION -->
@@ -85,7 +86,7 @@ status: open # plan | open | in-progress | done
 <context for agents: conventions, links, env notes, etc.>
 ````
 
-**Item status:** `plan` (grooming, not ready) | `open` (ready for agents) | `in-progress` (at least one task in progress) | `done` (all tasks done, ready to archive).
+**Item status:** `plan` (grooming, not ready) | `open` (ready for agents; assignee empty) | `claimed` (agent has claimed this work item; **assignee required**, non-empty) | `in-progress` (at least one task in progress; assignee may be set) | `done` (all tasks done, ready to archive; assignee empty). **Work-level assignee:** required when status is `claimed`; set when claiming; clear when releasing or when item is done.
 
 ### Task Format (`work/<item-id>-<slug>/<tid>-<task-slug>.md`)
 
@@ -122,16 +123,16 @@ expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
 ### Human-in-the-Loop Protocol
 
 - **Write ordering:** Task edits → task file only. Item edits → `index.md` only. Feedback → `-feedback.md` only. No shared file to update.
-- **Starting work:** List `work/`, list task files per item, find `status: open`. Read item `index.md` (CONTEXT) and task `-feedback.md` if present. Set `status: in-progress`, `assignee: <agent-id>`, optionally `expiresAt`. Require every `dep` task file to have `status: done` before starting. Update only the task file.
-- **Completing:** If `requiresHumanReview: false` → `status: done`, clear `assignee`. If `requiresHumanReview: true` → set `status: review` and **stop**.
-- **Releasing:** Set `status: open`, clear `assignee` and `expiresAt`. If releasing because stuck, append to task's `-feedback.md` first.
+- **Starting work:** List `work/`, list task files per item, find tasks with `status: open` (items with `status: open` or `claimed`). Read item `index.md` (CONTEXT) and task `-feedback.md` if present. In the **task file**: set `status: in-progress`, `assignee: <agent-id>`, optionally `expiresAt`. In the **item** `index.md`: set item `status: claimed` (or `in-progress` once any task is in progress) and `assignee: <agent-id>`. Require every `dep` task file to have `status: done` before starting.
+- **Completing:** If `requiresHumanReview: false` → `status: done`, clear `assignee` in task file. If all tasks in the item are done, set item `status: done` and clear item `assignee`. If `requiresHumanReview: true` → set `status: review` and **stop**.
+- **Releasing:** In task file: set `status: open`, clear `assignee` and `expiresAt`. If no other task is in progress on that item, set item `status: open` and clear item `assignee`. If releasing because stuck, append to task's `-feedback.md` first.
 - **Blocking:** Set `status: block`; MUST create/append to task's `-feedback.md` (what was tried, why blocked, what would unblock).
 - **Expiry:** If `expiresAt` in the past, another agent may take over (set `status: in-progress`, new `assignee`, fresh `expiresAt`).
 
 ### Status flow
 
 ```
-plan ──→ open ──→ in-progress ──→ done           (requiresHumanReview: false)
+plan ──→ open ──→ claimed ──→ in-progress ──→ done   (requiresHumanReview: false)
                             ──→ review ──→ done (requiresHumanReview: true)
 
 Any active state ──→ block ──→ in-progress or open
@@ -151,11 +152,21 @@ Any active state ──→ block ──→ in-progress or open
 
 ---
 
+## Checking the current spec
+
+Before acting on the backlog, ensure your behavior matches the **current spec**. The single source of truth is `SPEC.md` in the repo (see **Version** in that file). This skill embeds a summary (Spec v4.0.4 above); when in doubt, prefer `SPEC.md`. In particular:
+
+- **Work-level metadata:** Item `index.md` has `work`, `status` (plan | open | claimed | in-progress | done), and `assignee`. When status is `claimed`, assignee is required (non-empty). When an agent claims a work item, set item `status: claimed` and `assignee: <agent-id>` in that item's `index.md`; when releasing or when the item is done, clear `assignee` and set status to `open` or `done` as appropriate.
+- **Task-level metadata:** Task files use `task`, `status`, `priority`, `dep`, `assignee`, `requiresHumanReview`, `expiresAt`. Discovery is by listing `work/` and task files only; no shared backlog or manifest file.
+- If the repo's `SPEC.md` version is newer than the embedded spec, read `SPEC.md` and follow it.
+
+---
+
 ## Step 1: Read current state
 
 - Check if `.backlogmd/` exists. If not, run **Step 1b: Bootstrap** before continuing.
 - List `.backlogmd/work/` to get open item directories.
-- For each item directory, read `index.md` (metadata, item `status`, CONTEXT) and list task files (`<tid>-<task-slug>.md`) and read their metadata to understand current items and tasks. Ignore `-feedback.md` for discovery; read them when working on a specific task.
+- For each item directory, read `index.md` (metadata: `work`, item `status`, optional `assignee`, CONTEXT) and list task files (`<tid>-<task-slug>.md`) and read their metadata to understand current items and tasks. Ignore `-feedback.md` for discovery; read them when working on a specific task.
 
 ### Step 1b: Bootstrap (first-time setup)
 
@@ -232,7 +243,7 @@ Then:
 
 Create `.backlogmd/work/<item-id>-<slug>/` and `.backlogmd/work/<item-id>-<slug>/index.md` with:
 
-- `<!-- METADATA -->` YAML: `work: <work item title>`, `status: open` (or `plan` if not ready for agents).
+- `<!-- METADATA -->` YAML: `work: <work item title>`, `status: open` (or `plan` if not ready for agents), optional `assignee: ""` (set when work item is claimed).
 - `<!-- DESCRIPTION -->` (optional).
 - `<!-- CONTEXT -->` (optional; add context for agents if any).
 
@@ -259,23 +270,23 @@ For each task, create `.backlogmd/work/<item-id>-<slug>/<tid>-<task-slug>.md` us
 Valid status flow:
 
 ```
-plan ──→ open ──→ in-progress ──→ done       (requiresHumanReview: false)
+plan ──→ open ──→ claimed ──→ in-progress ──→ done   (requiresHumanReview: false)
                             ──→ review ──→ done (requiresHumanReview: true)
 Any active state ──→ block ──→ in-progress or open
 ```
 
 - `plan → open`: promotion (human or authorized agent only).
-- `open → in-progress`: start work — set `assignee` (and optionally `expiresAt`); verify every `dep` path resolves to a task with `status: done`.
-- `in-progress → done`: only valid when `requiresHumanReview: false`. Clear `assignee`.
+- `open → in-progress`: start work — in task file set `assignee` (and optionally `expiresAt`); in item `index.md` set `status: claimed` or `in-progress` and `assignee: <agent-id>`. Verify every `dep` path resolves to a task with `status: done`.
+- `in-progress → done`: only valid when `requiresHumanReview: false`. Clear task `assignee`; if all tasks in item are done, set item `status: done` and clear item `assignee`.
 - `in-progress → review`: required when `requiresHumanReview: true`. Keep `assignee`. Agent must **stop**.
 - `review → done`: human only. Clear `assignee`.
 - Any active → `block`: set when externally blocked. `assignee` preserved.
-- `block → in-progress`: when unblocked. `block → open`: when releasing claim (clear `assignee`).
+- `block → in-progress`: when unblocked. `block → open`: when releasing claim — clear task `assignee`; if no other task in progress in that item, set item `status: open` and clear item `assignee`.
 - Reject invalid transitions and explain why.
 
 ### B3. Write changes (task file only)
 
-1. Update the task file's YAML metadata block to match the new status (and `assignee` if starting or releasing).
+1. Update the task file's YAML metadata block to match the new status (and `assignee` if starting or releasing). If starting or releasing affects the work item (claim or release), update the item's `index.md` metadata: set or clear `assignee`, set `status` to `claimed`, `in-progress`, `open`, or `done` as appropriate.
 2. If moving to `done`, check all acceptance criteria boxes (`- [ ]` → `- [x]`).
 3. When setting `status: block`, create or append to the task's `-feedback.md` file (what was tried, why blocked, what would unblock). When releasing because stuck, append to `-feedback.md` before setting status to open.
 
@@ -363,12 +374,12 @@ Validate that the entire `.backlogmd/` system is consistent. Read all files and 
 
 ### F3. Validate formats
 
-- [ ] Every `index.md` has `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, `<!-- CONTEXT -->` and YAML with at least `work` and `status`. Item `status` is one of `plan`, `open`, `in-progress`, `done`.
+- [ ] Every `index.md` has `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, `<!-- CONTEXT -->` and YAML with at least `work` and `status`; optional `assignee`. Item `status` is one of `plan`, `open`, `claimed`, `in-progress`, `done`. When `claimed`, `assignee` must be non-empty; when `open` or `done`, `assignee` must be empty; when `in-progress`, `assignee` may be set.
 - [ ] Every task file has `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, `<!-- ACCEPTANCE -->` and YAML with required fields: `task`, `status`, `priority`, `dep`, `assignee`, `requiresHumanReview`, `expiresAt`.
 - [ ] Task statuses are valid (`plan`, `open`, `in-progress`, `review`, `block`, `done`).
 - [ ] `dep` values are paths relative to `.backlogmd/`: `work/<item-id>-<slug>/<tid>-<task-slug>.md`; no self-references, no duplicates, no cycles (DAG).
 - [ ] Item IDs and task IDs are zero-padded (min 3 digits) and unique in their scope.
-- [ ] `in-progress` and `review` tasks have non-empty `assignee`. `done` tasks have empty `assignee`.
+- [ ] `in-progress` and `review` tasks have non-empty `assignee`. `done` tasks have empty `assignee`. Items with status `claimed` have non-empty item `assignee`.
 
 ### F4. Validate dependencies and workflow
 

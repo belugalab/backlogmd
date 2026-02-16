@@ -24,7 +24,7 @@ All paths in this document and throughout the system are relative within `.backl
 
 ## Open items
 
-- **Open items** are the directories under `work/`. Agents discover work by listing `work/`, then for each item directory reading `index.md` (metadata, including item `status`, and `<!-- CONTEXT -->`) and listing task files (filenames matching `<tid>-<task-slug>.md`). Items with `status: plan` are not ready for agents; items with `status: open` may have tasks ready to start.
+- **Open items** are the directories under `work/`. Agents discover work by listing `work/`, then for each item directory reading `index.md` (metadata, including item `status`, and `<!-- CONTEXT -->`) and listing task files (filenames matching `<tid>-<task-slug>.md`). Items with `status: plan` are not ready for agents; items with `status: open` or `status: claimed` may have tasks ready to start (claimed indicates an agent has taken the item).
 - **Archived items** are under `z-archive/`; agents skip them for active work.
 - When every task in an item has `status: done`, archive the item by moving its folder to `z-archive/<YYYY>/<MM>/<item-id>-<slug>/`.
 
@@ -47,7 +47,8 @@ All paths in this document and throughout the system are relative within `.backl
 
 ```yaml
 work: Add login flow # work item title
-status: open # plan | open | in-progress | done
+status: open # plan | open | claimed | in-progress | done
+assignee: "" # agent id when work item is claimed (required when status: claimed); empty when open or done
 ```
 
 <!-- DESCRIPTION -->
@@ -63,9 +64,11 @@ status: open # plan | open | in-progress | done
 
 - **`status`**: Item-level lifecycle, distinct from task `status`. Values:
   - **`plan`** — Grooming/draft; not ready for agents to work on.
-  - **`open`** — Ready for agents to start tasks in this item.
-  - **`in-progress`** — At least one task in the item is being worked on.
-  - **`done`** — Every task in the item has `status: done`; item is ready to archive (or already considered complete).
+  - **`open`** — Ready for agents to start tasks in this item. `assignee` should be empty.
+  - **`claimed`** — An agent has claimed this work item (intends to work on it). **Must** have non-empty `assignee`.
+  - **`in-progress`** — At least one task in the item is being worked on. `assignee` may be set (agent working on it).
+  - **`done`** — Every task in the item has `status: done`; item is ready to archive (or already considered complete). `assignee` should be empty.
+- **`assignee`**: When item `status` is `claimed`, `assignee` is **required** (non-empty). When `open` or `done`, `assignee` must be empty. When setting item `status: claimed`, set `assignee: <agent-id>`. When releasing or when item is `done`, clear `assignee`.
 
 ### Rules
 
@@ -155,17 +158,17 @@ File-based systems cannot provide true atomicity. To minimize inconsistency:
 ### Starting work
 
 1. Agent lists directories under `work/`, then per item lists task files (`<tid>-<task-slug>.md`) and reads their metadata to find tasks with `status: open`. When working on a task, the agent SHOULD read that item's `index.md` (especially `<!-- CONTEXT -->`) and, if present, the task's feedback file `<tid>-<task-slug>-feedback.md` (so previous attempts or blockers are visible).
-2. To start work on an `open` task: set `status: in-progress`, `assignee: <agent-id>`, and optionally `expiresAt` (ISO 8601, short horizon — e.g., 30 min). A task cannot move to `in-progress` until **every** dependency in its `dep` list is done: each `dep` entry is a path `work/<item-id>-<slug>/<tid>-<task-slug>.md`; read that task file and require `status === "done"` for each. Update only the task file.
+2. To start work on an `open` task: set `status: in-progress`, `assignee: <agent-id>`, and optionally `expiresAt` (ISO 8601, short horizon — e.g., 30 min) in the **task file**. Also update the **item** `index.md`: set item `status` to `claimed` (or `in-progress` once any task in the item is in progress) and `assignee: <agent-id>`. A task cannot move to `in-progress` until **every** dependency in its `dep` list is done: each `dep` entry is a path `work/<item-id>-<slug>/<tid>-<task-slug>.md`; read that task file and require `status === "done"` for each.
 3. Only `open` tasks may be started. `plan` tasks must first be promoted to `open` by a human or authorized agent.
 
 ### Completing work
 
-4. If `requiresHumanReview: false`: set `status: done` and clear `assignee`.
+4. If `requiresHumanReview: false`: set `status: done` and clear `assignee` in the task file. If every task in the item is done, set the item's `index.md` to `status: done` and clear item `assignee`.
 5. If `requiresHumanReview: true`: agent MUST set `status: review` and **stop**. Direct `in-progress → done` is **invalid** when `requiresHumanReview: true`. Only a human (or authorized role) may move `review → done`.
 
 ### Releasing
 
-6. To stop working on a task without completing it, set `status: open` and clear `assignee` and `expiresAt`. If the agent is stuck (e.g. giving up without completing), the agent SHOULD append to the task's `-feedback.md` file first with a short note (what was tried, why stuck) so the next agent or human has context.
+6. To stop working on a task without completing it, set `status: open` and clear `assignee` and `expiresAt` in the task file. If no other task in that item is in progress, set the item's `index.md` to `status: open` and clear item `assignee`. If the agent is stuck (e.g. giving up without completing), the agent SHOULD append to the task's `-feedback.md` file first with a short note (what was tried, why stuck) so the next agent or human has context.
 
 ### Expiry
 
@@ -192,17 +195,17 @@ File-based systems cannot provide true atomicity. To minimize inconsistency:
 ### Status flow
 
 ```
-plan ──→ open ──→ in-progress ──→ done           (requiresHumanReview: false)
-                            ──→ review ──→ done (requiresHumanReview: true)
+plan ──→ open ──→ claimed ──→ in-progress ──→ done   (requiresHumanReview: false)
+                                    ──→ review ──→ done (requiresHumanReview: true)
 
 Any active state ──→ block ──→ in-progress or open
 ```
 
 - `plan → open`: promotion (human or authorized agent only).
-- `open → in-progress`: start work (any agent); set `assignee` and optionally `expiresAt`.
-- `in-progress → done`: completion (only valid when `requiresHumanReview: false`).
+- `open → in-progress`: start work (any agent); in task file set `assignee` and optionally `expiresAt`; in item `index.md` set `status: claimed` or `in-progress` and `assignee: <agent-id>`.
+- `in-progress → done`: completion (only valid when `requiresHumanReview: false`). Clear task `assignee`; if all tasks in the item are done, set item `status: done` and clear item `assignee`.
 - `in-progress → review → done`: completion with human gate (required when `requiresHumanReview: true`).
-- `block`: reachable from `in-progress` or `review`. Returns to `in-progress` (unblocked) or `open` (released).
+- `block`: reachable from `in-progress` or `review`. Returns to `in-progress` (unblocked) or `open` (released). When releasing to `open`, clear task `assignee`; if no other task in progress in that item, set item `status: open` and clear item `assignee`.
 - A task cannot move to `in-progress` until every referenced task in `dep` (by path `work/.../<tid>-<task-slug>.md`) has `status: done`. Agents wait for each dependency (that work/task) to be fully done before starting.
 - No circular dependencies. The set of all tasks and their `dep` paths must form a DAG. Agents adding `dep` entries must verify no cycle is introduced across the backlog.
 - Task edits update only the task file. Task feedback updates only the task's `-feedback.md` file when present. Item-level edits (metadata, description, CONTEXT) update the item's `index.md`.
@@ -213,6 +216,7 @@ Any active state ──→ block ──→ in-progress or open
 Task files and directory structure are the source of truth. There is no shared backlog file. `index.md` does not contain a task list; tasks are discovered by listing the item directory for `<tid>-<task-slug>.md` files.
 
 - If a task is `done`, `assignee` MUST be empty in the task file; clear it during any repair.
+- If item status is `claimed`, item `assignee` MUST be non-empty; repair by setting assignee or moving status to `open`.
 - No link list to regenerate in `index.md`.
 
 ## Conventions
