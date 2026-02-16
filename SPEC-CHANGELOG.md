@@ -4,6 +4,15 @@
 
 ---
 
+## 4.0.3
+
+- **Summary:** Renamed item-level metadata key from `task` to `work` in `index.md` so it is not confused with task files (which use `task` for the task title). The work item title is now `work:`.
+- **Breaking changes:**
+  - **Item Format** — In `work/<item-id>-<slug>/index.md`, the METADATA YAML must use `work: <title>` (not `task:`) for the work item title.
+- **Migration (4.0.2 → 4.0.3):** In every item `index.md`, rename the key `task:` to `work:` in the METADATA block (value unchanged).
+
+---
+
 ## 4.0.2
 
 - **Summary:** Removed the claim step. Tasks go directly from `open` to `in-progress` when an agent starts work; the `reserved` status is removed.

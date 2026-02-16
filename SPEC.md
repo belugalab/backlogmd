@@ -1,6 +1,6 @@
 # Specification
 
-**Version:** 4.0.2
+**Version:** 4.0.3
 
 Single source of truth for the `.backlogmd/` system — markdown-based agile/kanban for agentic development. Agents must read this file before interacting with the backlog.
 
@@ -46,7 +46,7 @@ All paths in this document and throughout the system are relative within `.backl
 <!-- METADATA -->
 
 ```yaml
-task: Add login flow # item title
+work: Add login flow # work item title
 status: open # plan | open | in-progress | done
 ```
 
@@ -227,6 +227,6 @@ Task files and directory structure are the source of truth. There is no shared b
 ## Versioning
 
 - Semantic Versioning (`MAJOR.MINOR.PATCH`).
-- This file is 4.0.2. Prior specs live in `specs/`.
+- This file is 4.0.3. Prior specs live in `specs/`.
 - See `SPEC-CHANGELOG.md` for history and migrations.
 - Agents may reject if the spec version in this file is unsupported.

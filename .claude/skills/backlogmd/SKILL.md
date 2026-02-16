@@ -26,7 +26,7 @@ You are an agent that manages the `.backlogmd/` backlog system. You can create i
 
 ---
 
-## Spec v4.0.2 (embedded)
+## Spec v4.0.3 (embedded)
 
 Single source of truth for `.backlogmd/` is `SPEC.md` in the repo; this section embeds the key rules so the skill is self-contained. When in doubt, prefer `SPEC.md`.
 
@@ -72,7 +72,7 @@ All paths are relative within `.backlogmd/`.
 <!-- METADATA -->
 
 ```yaml
-task: Add login flow # item title
+work: Add login flow # work item title
 status: open # plan | open | in-progress | done
 ```
 
@@ -176,7 +176,7 @@ Based on `$ARGUMENTS`, determine which operation the user wants:
 | **Init backlog**  | "init backlog", "set up backlogmd", "initialize" (also happens automatically if `.backlogmd/` doesn't exist) |
 | **Create item**   | "add a feature for...", "new bugfix: ...", "refactor the...", "chore: ...", a work item description          |
 | **Add tasks**     | "add tasks to...", "new task for..."                                                                         |
-| **Update status** | "mark task X as done", "start working on...", "task X is blocked", "release task...", "stop working on..."        |
+| **Update status** | "mark task X as done", "start working on...", "task X is blocked", "release task...", "stop working on..."   |
 | **Edit**          | "edit task...", "update description of...", "rename item..."                                                 |
 | **Archive**       | "archive item...", "clean up done items"                                                                     |
 | **Show status**   | "what's the current state?", "show backlog", "what's in progress?"                                           |
@@ -232,7 +232,7 @@ Then:
 
 Create `.backlogmd/work/<item-id>-<slug>/` and `.backlogmd/work/<item-id>-<slug>/index.md` with:
 
-- `<!-- METADATA -->` YAML: `task: <item title>`, `status: open` (or `plan` if not ready for agents).
+- `<!-- METADATA -->` YAML: `work: <work item title>`, `status: open` (or `plan` if not ready for agents).
 - `<!-- DESCRIPTION -->` (optional).
 - `<!-- CONTEXT -->` (optional; add context for agents if any).
 
@@ -301,7 +301,7 @@ Show the current content and ask the user what they want to change.
 ### C3. Apply edits (single file only)
 
 1. **Task edits:** Edit only the task file (metadata, description, acceptance criteria). If renaming task/slug, the task filename can be updated (move file) and any `dep` references in other task files that point to it must be updated.
-2. **Item edits:** Edit only that item's `index.md` (metadata `task`/`status`, description, CONTEXT). No task list to sync.
+2. **Item edits:** Edit only that item's `index.md` (metadata `work`/`status`, description, CONTEXT). No task list to sync.
 
 ### C4. Confirm changes
 
@@ -363,7 +363,7 @@ Validate that the entire `.backlogmd/` system is consistent. Read all files and 
 
 ### F3. Validate formats
 
-- [ ] Every `index.md` has `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, `<!-- CONTEXT -->` and YAML with at least `task` and `status`. Item `status` is one of `plan`, `open`, `in-progress`, `done`.
+- [ ] Every `index.md` has `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, `<!-- CONTEXT -->` and YAML with at least `work` and `status`. Item `status` is one of `plan`, `open`, `in-progress`, `done`.
 - [ ] Every task file has `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, `<!-- ACCEPTANCE -->` and YAML with required fields: `task`, `status`, `priority`, `dep`, `assignee`, `requiresHumanReview`, `expiresAt`.
 - [ ] Task statuses are valid (`plan`, `open`, `in-progress`, `review`, `block`, `done`).
 - [ ] `dep` values are paths relative to `.backlogmd/`: `work/<item-id>-<slug>/<tid>-<task-slug>.md`; no self-references, no duplicates, no cycles (DAG).
