@@ -1,6 +1,6 @@
 # Specification
 
-**Version:** 4.0.3
+**Version:** 4.0.4
 
 Single source of truth for the `.backlogmd/` system — markdown-based agile/kanban for agentic development. Agents must read this file before interacting with the backlog.
 
@@ -16,7 +16,7 @@ Single source of truth for the `.backlogmd/` system — markdown-based agile/kan
 │   │   ├── 002-task-slug.md
 │   │   └── ...
 │   └── ...
-└── .archive/
+└── z-archive/
     └── <YYYY>/<MM>/<item-id>-<slug>/
 ```
 
@@ -25,8 +25,8 @@ All paths in this document and throughout the system are relative within `.backl
 ## Open items
 
 - **Open items** are the directories under `work/`. Agents discover work by listing `work/`, then for each item directory reading `index.md` (metadata, including item `status`, and `<!-- CONTEXT -->`) and listing task files (filenames matching `<tid>-<task-slug>.md`). Items with `status: plan` are not ready for agents; items with `status: open` may have tasks ready to start.
-- **Archived items** are under `.archive/`; agents skip them for active work.
-- When every task in an item has `status: done`, archive the item by moving its folder to `.archive/<YYYY>/<MM>/<item-id>-<slug>/`.
+- **Archived items** are under `z-archive/`; agents skip them for active work.
+- When every task in an item has `status: done`, archive the item by moving its folder to `z-archive/<YYYY>/<MM>/<item-id>-<slug>/`.
 
 ## IDs and Naming
 
@@ -178,9 +178,9 @@ File-based systems cannot provide true atomicity. To minimize inconsistency:
 
 ## Archive
 
-- Cold storage; agents skip `.archive/`.
+- Cold storage; agents skip `z-archive/`. The name sorts after `work/` in listings so active work appears first.
 - An item is archived **only when every task in the item has `status: done`**.
-- Archive procedure: move the item folder to `.archive/<YYYY>/<MM>/<item-id>-<slug>/` (including any `-feedback.md` files). There is no shared file to update; the directory structure is the source of truth.
+- Archive procedure: move the item folder to `z-archive/<YYYY>/<MM>/<item-id>-<slug>/` (including any `-feedback.md` files). There is no shared file to update; the directory structure is the source of truth.
 
 ## Limits
 
@@ -227,6 +227,6 @@ Task files and directory structure are the source of truth. There is no shared b
 ## Versioning
 
 - Semantic Versioning (`MAJOR.MINOR.PATCH`).
-- This file is 4.0.3. Prior specs live in `specs/`.
+- This file is 4.0.4. Prior specs live in `specs/`.
 - See `SPEC-CHANGELOG.md` for history and migrations.
 - Agents may reject if the spec version in this file is unsupported.

@@ -4,6 +4,15 @@
 
 ---
 
+## 4.0.4
+
+- **Summary:** Renamed `.archive/` to `z-archive/` so that in alphabetical listings (e.g. `ls`) `work/` appears first and archive second. The `z-` prefix ensures the archive folder sorts after `work/`.
+- **Breaking changes:**
+  - **Archive directory** — Path is now `z-archive/<YYYY>/<MM>/<item-id>-<slug>/` (was `.archive/...`). Agents skip `z-archive/` for active work.
+- **Migration (4.0.3 → 4.0.4):** Rename `.backlogmd/.archive/` to `.backlogmd/z-archive/` (move existing archived item folders into the new path if any).
+
+---
+
 ## 4.0.3
 
 - **Summary:** Renamed item-level metadata key from `task` to `work` in `index.md` so it is not confused with task files (which use `task` for the task title). The work item title is now `work:`.

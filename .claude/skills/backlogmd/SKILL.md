@@ -1,6 +1,6 @@
 ---
 name: backlogmd
-description: Use when planning work (to create items and tasks), when starting implementation (to start and work tasks), when completing work (to mark tasks done), or to check backlog status. Manages .backlogmd/ (work/ and .archive/); no shared manifest or backlog file. Item index.md has metadata, description, and CONTEXT for agents.
+description: Use when planning work (to create items and tasks), when starting implementation (to start and work tasks), when completing work (to mark tasks done), or to check backlog status. Manages .backlogmd/ (work/ and z-archive/); no shared manifest or backlog file. Item index.md has metadata, description, and CONTEXT for agents.
 argument-hint: init/create/start/done/edit/show/archive/check <item or task>
 allowed-tools: Read, Write, Edit, Glob, Bash(mkdir *), Bash(mv *)
 ---
@@ -26,7 +26,7 @@ You are an agent that manages the `.backlogmd/` backlog system. You can create i
 
 ---
 
-## Spec v4.0.3 (embedded)
+## Spec v4.0.4 (embedded)
 
 Single source of truth for `.backlogmd/` is `SPEC.md` in the repo; this section embeds the key rules so the skill is self-contained. When in doubt, prefer `SPEC.md`.
 
@@ -42,7 +42,7 @@ Single source of truth for `.backlogmd/` is `SPEC.md` in the repo; this section 
 │   │   ├── 002-task-slug.md
 │   │   └── ...
 │   └── ...
-└── .archive/
+└── z-archive/
     └── <YYYY>/<MM>/<item-id>-<slug>/
 ```
 
@@ -51,8 +51,8 @@ All paths are relative within `.backlogmd/`.
 ### Open items
 
 - **Open items** are the directories under `work/`. Agents discover work by listing `work/`, then for each item directory reading `index.md` (metadata, including item `status`, and `<!-- CONTEXT -->`) and listing task files (filenames matching `<tid>-<task-slug>.md`). Items with `status: plan` are not ready for agents; items with `status: open` may have tasks ready to start.
-- **Archived items** are under `.archive/`; agents skip them for active work.
-- When every task in an item has `status: done`, archive the item by moving its folder to `.archive/<YYYY>/<MM>/<item-id>-<slug>/`.
+- **Archived items** are under `z-archive/`; agents skip them for active work.
+- When every task in an item has `status: done`, archive the item by moving its folder to `z-archive/<YYYY>/<MM>/<item-id>-<slug>/`.
 
 ### IDs and Naming
 
@@ -139,7 +139,7 @@ Any active state ──→ block ──→ in-progress or open
 
 ### Archive
 
-- Archive **only when every task in the item has `status: done`**. Move the item folder to `.archive/<YYYY>/<MM>/<item-id>-<slug>/` (including any `-feedback.md` files). No shared file to update.
+- Archive **only when every task in the item has `status: done`**. Move the item folder to `z-archive/<YYYY>/<MM>/<item-id>-<slug>/` (including any `-feedback.md` files). No shared file to update.
 
 ### Limits
 
@@ -163,7 +163,7 @@ If `.backlogmd/` does not exist, create the initial structure:
 
 1. Create `.backlogmd/` directory.
 2. Create `.backlogmd/work/` directory.
-3. Create `.backlogmd/.archive/` directory (optional; can be created when first archiving).
+3. Create `.backlogmd/z-archive/` directory (optional; can be created when first archiving).
 
 Inform the user that the backlog has been initialized, then continue to Step 2.
 
@@ -318,7 +318,7 @@ Show the user a summary of what was changed.
 
 ### D2. Execute archive (single step)
 
-1. **Move** the item folder from `.backlogmd/work/<item-id>-<slug>/` to `.backlogmd/.archive/<YYYY>/<MM>/<item-id>-<slug>/` (create year/month directories if needed). This includes `index.md`, all task files, and any `-feedback.md` files.
+1. **Move** the item folder from `.backlogmd/work/<item-id>-<slug>/` to `.backlogmd/z-archive/<YYYY>/<MM>/<item-id>-<slug>/` (create year/month directories if needed). This includes `index.md`, all task files, and any `-feedback.md` files.
 
 ### D3. Confirm
 
@@ -352,7 +352,7 @@ Validate that the entire `.backlogmd/` system is consistent. Read all files and 
 ### F1. Read all state
 
 - List `.backlogmd/work/` and for each item directory read `index.md` and list task files (`<tid>-<task-slug>.md`), then read each task file.
-- If `.archive/` exists, list it (read-only check).
+- If `z-archive/` exists, list it (read-only check).
 
 ### F2. Validate structure
 
@@ -378,7 +378,7 @@ Validate that the entire `.backlogmd/` system is consistent. Read all files and 
 
 ### F5. Validate archive
 
-- [ ] No item folder in `.archive/` is also present in `work/`.
+- [ ] No item folder in `z-archive/` is also present in `work/`.
 
 ### F6. Report
 
@@ -400,6 +400,6 @@ If errors are found, offer to fix them (with user confirmation). Task file is so
 - Never overwrite existing items or tasks — only create new item dirs/task files or edit in place.
 - Always confirm with the user before writing or modifying files.
 - Max 20 open items (directories in `work/`). If the limit is reached, the user must archive an item or use an existing one.
-- The `.archive/` directory is cold storage. After moving items into it, never modify them again.
+- The `z-archive/` directory is cold storage. After moving items into it, never modify them again.
 - A completed task cannot be reopened. If the work needs revisiting, create a new task instead.
 - When `requiresHumanReview: true`, agents MUST NOT move a task directly from `in-progress` to `done` — it must go through `review`.
