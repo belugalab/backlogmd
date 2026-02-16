@@ -115,7 +115,7 @@ expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
 - [ ] <criterion>
 ````
 
-- Filenames: `<tid>-<task-slug>.md`; `tid` zero-padded, unique per item. Optional sibling: `<tid>-<task-slug>-feedback.md` for agent feedback when stuck or blocking.
+- Filenames: `<tid>-<task-slug>.md`; `tid` zero-padded, unique per item. Optional sibling: `<tid>-<task-slug>-feedback.md` (feedback file). **Feedback file:** path `work/<item-id>-<slug>/<tid>-<task-slug>-feedback.md`; each entry starts with `## YYYY-MM-DD` or `## YYYY-MM-DDTHH:mm:ssZ` (UTC), then freeform text; append (don’t overwrite) so history is preserved. Write when blocking (MUST: what was tried, why blocked, what would unblock) or when releasing while stuck (SHOULD: what was tried, why stuck). Not used for task discovery. Agents SHOULD read it when starting a task if present.
 - Status codes: `plan` | `open` | `in-progress` | `review` | `block` | `done`. `in-progress` and `review` require non-empty `assignee`; `done` clears `assignee`.
 - **dep**: Paths relative to `.backlogmd/`: `work/<item-id>-<slug>/<tid>-<task-slug>.md`. Cross-item allowed. No self-reference, no duplicates, no cycles (DAG). Task cannot move to `in-progress` until every `dep` task has `status: done`.
 

@@ -106,7 +106,7 @@ expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
 
 ### Rules
 
-- Filenames: `<tid>-<task-slug>.md`; `tid` zero-padded, unique per item. The only required file for a task is the task file itself. A task may have an optional sibling **feedback file** `<tid>-<task-slug>-feedback.md` (see **Blocking** and **Releasing**).
+- Filenames: `<tid>-<task-slug>.md`; `tid` zero-padded, unique per item. The only required file for a task is the task file itself. A task may have an optional sibling **feedback file** (see below).
 - Status codes:
   - `plan` — groomed/draft, not ready for agents to pick up.
   - `open` — ready for an agent to start work.
@@ -118,6 +118,26 @@ expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
 - Three HTML comment markers only: `<!-- METADATA -->`, `<!-- DESCRIPTION -->`, `<!-- ACCEPTANCE -->`.
 - Acceptance criteria use markdown checkboxes.
 - No YAML frontmatter outside the fenced code block; keep metadata lines ≤ 120 chars.
+
+### Feedback file (`<tid>-<task-slug>-feedback.md`)
+
+- **Purpose:** Optional file next to a task file. Agents use it to record why work stopped (e.g. stuck or blocked) so the next agent or a human has context. It is not used for task discovery; task files are discovered by listing `<tid>-<task-slug>.md` only (feedback files are excluded).
+- **Path:** `work/<item-id>-<slug>/<tid>-<task-slug>-feedback.md` (same directory as the task file, same `tid` and slug with `-feedback` before `.md`).
+- **When to write:**
+  - **Blocking:** When setting task `status: block`, the agent MUST create or append to this file with: what was tried, why progress is blocked, and optionally what would unblock (e.g. "wait for PR merge", "need API key").
+  - **Releasing (stuck):** When stopping work without completing (releasing the task back to `open`), if the agent is stuck the agent SHOULD append a short note: what was tried, why stuck.
+- **Format:** Freeform text or markdown. **Separator:** each new entry MUST start with a level-2 heading with an ISO 8601 date so entries are ordered and easy to scan. Use `## YYYY-MM-DD` or `## YYYY-MM-DDTHH:mm:ssZ` (UTC). Example:
+
+  ```md
+  ## 2026-02-16T14:30:00Z
+  Tried X and Y. Blocked: API returns 403. Would unblock: valid API key.
+
+  ## 2026-02-17T09:00:00Z
+  Retried after key rotation. Still stuck on rate limit.
+  ```
+
+  Append each entry (newest at bottom); do not overwrite. The next reader sees prior attempts and blockers in order.
+- **Who reads it:** When starting work on a task, the agent SHOULD read the feedback file if present so previous attempts or blockers are visible. Humans may read it when triaging or unblocking.
 
 ## Human-in-the-Loop Protocol
 
