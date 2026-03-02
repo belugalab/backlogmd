@@ -4,6 +4,16 @@
 
 ---
 
+## 4.0.5
+
+- **Summary:** Clarify and make mandatory that task status must be updated **immediately** when a task is completed (no batching). Progress must be visible after each task and at the work-item level.
+- **Changed:**
+  - **Human-in-the-Loop Protocol — Completing work:** The agent MUST update the task file (set `status: done`, clear `assignee`, check acceptance criteria) as soon as that task's implementation is finished, before starting the next task. When all tasks in the item are done, update the item's `index.md` in the same step. Deferring updates until all tasks are done is invalid.
+  - **Work item vs tasks:** New subsection clarifying that the work item (`index.md`) reflects overall deliverable state and tasks are individual task files; every task-level change that affects the item (e.g. task started, last task done, task released with none in progress) must be reflected in the item's `index.md` in the same step so progress is visible at both levels.
+  - **Workflow Rules:** Task status must reflect current progress; each task must be marked done as soon as that task is completed (no batched updates at the end). Item (work) status must also reflect current progress whenever a task transition implies a change to the item — update `index.md` in the same step.
+
+---
+
 ## 4.0.4
 
 - **Summary:** Renamed `.archive/` to `z-archive/` so that in alphabetical listings (e.g. `ls`) `work/` appears first and archive second. The `z-` prefix ensures the archive folder sorts after `work/`.

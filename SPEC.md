@@ -1,6 +1,6 @@
 # Specification
 
-**Version:** 4.0.4
+**Version:** 4.0.5
 
 Single source of truth for the `.backlogmd/` system — markdown-based agile/kanban for agentic development. Agents must read this file before interacting with the backlog.
 
@@ -155,6 +155,12 @@ File-based systems cannot provide true atomicity. To minimize inconsistency:
 3. **Task feedback:** when recording feedback (e.g. when stuck or blocking), create or append to the task's `-feedback.md` file only; path is `work/<item-id>-<slug>/<tid>-<task-slug>-feedback.md`.
 4. There is no task list in `index.md`; nothing to regenerate from task files.
 
+### Work item vs tasks — reflecting progress
+
+- A **work item** (item) is one folder under `work/` and its `index.md`. The item's `status` in `index.md` reflects the overall state of that deliverable (plan, open, claimed, in-progress, done).
+- **Tasks** are the individual task files (`<tid>-<task-slug>.md`) inside that folder; each task has its own `status` in its own file.
+- **Every task-level change that affects the item must be reflected in the item's `index.md` in the same step.** When a task is started → set item to `claimed` or `in-progress` and set item `assignee`. When a task is completed and all tasks in the item are done → set item to `status: done` and clear item `assignee`. When a task is released and no other task in that item is in progress → set item to `status: open` and clear item `assignee`. Progress must be visible at both task level and work-item level; do not defer item-level updates.
+
 ### Starting work
 
 1. Agent lists directories under `work/`, then per item lists task files (`<tid>-<task-slug>.md`) and reads their metadata to find tasks with `status: open`. When working on a task, the agent SHOULD read that item's `index.md` (especially `<!-- CONTEXT -->`) and, if present, the task's feedback file `<tid>-<task-slug>-feedback.md` (so previous attempts or blockers are visible).
@@ -163,7 +169,7 @@ File-based systems cannot provide true atomicity. To minimize inconsistency:
 
 ### Completing work
 
-4. If `requiresHumanReview: false`: set `status: done` and clear `assignee` in the task file. If every task in the item is done, set the item's `index.md` to `status: done` and clear item `assignee`.
+4. **Immediate update (mandatory):** When a task's implementation is finished, the agent **MUST** update that task's file **immediately** — in the same step, before starting the next task or ending the session. Update the task file: set `status: done`, clear `assignee`, and check acceptance criteria (`- [ ]` → `- [x]`). Deferring task status updates until multiple or all tasks are implemented is **invalid**; task status must reflect current progress so users see incremental completion. If `requiresHumanReview: false`: set `status: done` and clear `assignee` in the task file. **If every task in the item is now done**, update the item in the **same step**: set the item's `index.md` to `status: done` and clear item `assignee`, so work-item progress is visible immediately.
 5. If `requiresHumanReview: true`: agent MUST set `status: review` and **stop**. Direct `in-progress → done` is **invalid** when `requiresHumanReview: true`. Only a human (or authorized role) may move `review → done`.
 
 ### Releasing
@@ -191,6 +197,8 @@ File-based systems cannot provide true atomicity. To minimize inconsistency:
 - Recommended max 20 tasks per item. Items with more should be split into a new item.
 
 ## Workflow Rules
+
+- Task status must reflect current progress; therefore each task must be marked done as soon as that task is completed (no batched updates at the end). Item (work) status must also reflect current progress: whenever a task transition implies a change to the item (e.g. task started → item claimed/in-progress; last task done → item done; task released and none in progress → item open), update the item's `index.md` in the same step.
 
 ### Status flow
 
@@ -231,6 +239,6 @@ Task files and directory structure are the source of truth. There is no shared b
 ## Versioning
 
 - Semantic Versioning (`MAJOR.MINOR.PATCH`).
-- This file is 4.0.4. Prior specs live in `specs/`.
+- This file is 4.0.5. Prior specs live in `specs/`.
 - See `SPEC-CHANGELOG.md` for history and migrations.
 - Agents may reject if the spec version in this file is unsupported.

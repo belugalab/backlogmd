@@ -19,14 +19,14 @@ You are an agent that manages the `.backlogmd/` backlog system. You can create i
 4. **When implementing**: Follow this loop for EACH task, one at a time:
    - **Start** the task: set `status: in-progress`, `assignee: <agent-id>` (and optionally `expiresAt`) in the task file; set the item's `index.md` to `status: claimed` or `in-progress` and `assignee: <agent-id>`. First verify every `dep` path resolves to a task file with `status: done`. Read the item's `index.md` (especially `<!-- CONTEXT -->`) and any `<tid>-<task-slug>-feedback.md` if present.
    - **Implement** the task.
-   - **Complete** the task: if `requiresHumanReview: false`, set `status: done` and clear `assignee` in the task file; if all tasks in the item are done, set item `status: done` and clear item `assignee`. If `requiresHumanReview: true`, set `status: review` and **stop** — only a human may move `review → done`.
+   - **Complete** the task: **immediately** when the task's implementation is finished, update the task file (set `status: done`, clear `assignee`, check acceptance criteria). Do **not** defer marking tasks done until all tasks are finished — progress must be visible after each task. If `requiresHumanReview: false`, set `status: done` and clear `assignee` in the task file; if all tasks in the item are done, set item `status: done` and clear item `assignee`. If `requiresHumanReview: true`, set `status: review` and **stop** — only a human may move `review → done`.
    - **Only then** move to the next task.
    - **Writes**: Task edits → task file only. Item-level edits → `index.md` only. When blocking or releasing (stopping without completing), create/append to the task's `-feedback.md` file.
 5. **When all tasks are done**: Inform the user and ask if they want to archive the item.
 
 ---
 
-## Spec v4.0.4 (embedded)
+## Spec v4.0.5 (embedded)
 
 Single source of truth for `.backlogmd/` is `SPEC.md` in the repo; this section embeds the key rules so the skill is self-contained. When in doubt, prefer `SPEC.md`.
 
@@ -123,9 +123,10 @@ expiresAt: null # ISO 8601 timestamp for reservation expiry, or null
 ### Human-in-the-Loop Protocol
 
 - **Write ordering:** Task edits → task file only. Item edits → `index.md` only. Feedback → `-feedback.md` only. No shared file to update.
+- **Work item vs tasks:** The **work item** is the folder and its `index.md` (item `status` = overall deliverable state). **Tasks** are the `<tid>-<task-slug>.md` files (each has its own `status`). Every task-level change that affects the item must be reflected in the item's `index.md` in the **same step** (e.g. task started → item claimed/in-progress; last task done → item done; task released and none in progress → item open). Progress must be visible at both task and work-item level.
 - **Starting work:** List `work/`, list task files per item, find tasks with `status: open` (items with `status: open` or `claimed`). Read item `index.md` (CONTEXT) and task `-feedback.md` if present. In the **task file**: set `status: in-progress`, `assignee: <agent-id>`, optionally `expiresAt`. In the **item** `index.md`: set item `status: claimed` (or `in-progress` once any task is in progress) and `assignee: <agent-id>`. Require every `dep` task file to have `status: done` before starting.
-- **Completing:** If `requiresHumanReview: false` → `status: done`, clear `assignee` in task file. If all tasks in the item are done, set item `status: done` and clear item `assignee`. If `requiresHumanReview: true` → set `status: review` and **stop**.
-- **Releasing:** In task file: set `status: open`, clear `assignee` and `expiresAt`. If no other task is in progress on that item, set item `status: open` and clear item `assignee`. If releasing because stuck, append to task's `-feedback.md` first.
+- **Completing:** Update the task file **immediately** when that task is completed (no batched updates at the end). If `requiresHumanReview: false` → `status: done`, clear `assignee` in task file. If all tasks in the item are done, update the item in the **same step**: set item `status: done` and clear item `assignee`. If `requiresHumanReview: true` → set `status: review` and **stop**.
+- **Releasing:** In task file: set `status: open`, clear `assignee` and `expiresAt`. If no other task is in progress on that item, set item `status: open` and clear item `assignee` in the same step. If releasing because stuck, append to task's `-feedback.md` first.
 - **Blocking:** Set `status: block`; MUST create/append to task's `-feedback.md` (what was tried, why blocked, what would unblock).
 - **Expiry:** If `expiresAt` in the past, another agent may take over (set `status: in-progress`, new `assignee`, fresh `expiresAt`).
 
@@ -154,7 +155,7 @@ Any active state ──→ block ──→ in-progress or open
 
 ## Checking the current spec
 
-Before acting on the backlog, ensure your behavior matches the **current spec**. The single source of truth is `SPEC.md` in the repo (see **Version** in that file). This skill embeds a summary (Spec v4.0.4 above); when in doubt, prefer `SPEC.md`. In particular:
+Before acting on the backlog, ensure your behavior matches the **current spec**. The single source of truth is `SPEC.md` in the repo (see **Version** in that file). This skill embeds a summary (Spec v4.0.5 above); when in doubt, prefer `SPEC.md`. In particular:
 
 - **Work-level metadata:** Item `index.md` has `work`, `status` (plan | open | claimed | in-progress | done), and `assignee`. When status is `claimed`, assignee is required (non-empty). When an agent claims a work item, set item `status: claimed` and `assignee: <agent-id>` in that item's `index.md`; when releasing or when the item is done, clear `assignee` and set status to `open` or `done` as appropriate.
 - **Task-level metadata:** Task files use `task`, `status`, `priority`, `dep`, `assignee`, `requiresHumanReview`, `expiresAt`. Discovery is by listing `work/` and task files only; no shared backlog or manifest file.
